@@ -42,37 +42,37 @@ class _DicePageState extends State<DicePage> {
   Widget build(BuildContext context) {
     return Center(
       child: BlocBuilder<DiceeBloc, DiceeState>(
-          builder: (BuildContext context, DiceeState diceeSate) {
-            int leftNumber = diceeSate.leftNumber;
-            int rightNumber = diceeSate.rightNumber;
-            child:
-            return Row(
-              children: <Widget>[
-                Expanded(
-                  child: FlatButton(
-                    child: Image.asset(
-                      'images/dice$leftNumber.png',
-                    ),
-                    onPressed: () {
-                      BlocProvider.of<DiceeBloc>(context).add(LeftDiceeEvent());
-                    },
+        builder: (BuildContext context, DiceeState diceeSate) {
+          int leftNumber = diceeSate.leftNumber;
+          int rightNumber = diceeSate.rightNumber;
+          child:
+          return Row(
+            children: <Widget>[
+              Expanded(
+                child: FlatButton(
+                  child: Image.asset(
+                    'images/dice$leftNumber.png',
                   ),
+                  onPressed: () {
+                    BlocProvider.of<DiceeBloc>(context).add(LeftDiceeEvent());
+                  },
                 ),
-                //Get students to create the second die as a challenge
-                Expanded(
-                  child: FlatButton(
-                    child: Image.asset(
-                      'images/dice$rightNumber.png',
-                    ),
-                    onPressed: () {
-                      BlocProvider.of<DiceeBloc>(context).add(RightDiceeEvent());
-                    },
+              ),
+              //Get students to create the second die as a challenge
+              Expanded(
+                child: FlatButton(
+                  child: Image.asset(
+                    'images/dice$rightNumber.png',
                   ),
+                  onPressed: () {
+                    BlocProvider.of<DiceeBloc>(context).add(RightDiceeEvent());
+                  },
                 ),
-              ],
-            );
-          }
-      ),
+              ),
+            ],
+          );
+        }
+        ),
     );
   }
 }
