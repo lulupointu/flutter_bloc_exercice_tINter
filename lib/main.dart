@@ -1,117 +1,113 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:english_words/english_words.dart';
 
 /// Exercice:
-/// Dans cet exercice issue du tutoriel "Dicee" de www.appbrewery.co que vous avez déjà réalisé
-/// vous devez faire en sorte qu'un bloc gère les dés.
+/// Dans cet exercice issue du tutoriel "Write your first Flutter app" que vous avez déjà réalisé
+/// vous devez faire en sorte qu'un bloc gère les mots.
 ///
-/// Attention:
-/// Dans l'exercice de www.appbrewery.co, les dés étaient tout les deux relancés a chaque fois.
-/// J'ai modifié ce code pour que cliqué sur un dé ne relance que celui-ci et laisse l'autre
-/// inchangé
+/// N'oubliez pas de mettre votre BlocProvider au dessus de MaterialApp sinon vous aurez des
+/// problèmes
 
-void main() {
-  return runApp(
-    BlocProvider<DiceeBloc>(
-      create: (BuildContext context) => DiceeBloc(),
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: Scaffold(
-          backgroundColor: Colors.red,
-          appBar: AppBar(
-            title: Text('Dicee'),
-            backgroundColor: Colors.red,
-          ),
-          body: DicePage(),
-        ),
-      ),
-    ),
-  );
-}
+void main() => runApp(MyApp());
 
-class DicePage extends StatefulWidget {
+class MyApp extends StatelessWidget {
   @override
-  _DicePageState createState() => _DicePageState();
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Startup Name Generator',
+      home: RandomWords(),
+    );
+  }
 }
 
-class _DicePageState extends State<DicePage> {
+class _RandomWordsState extends State<RandomWords> {
+  final _suggestions = <WordPair>[];
+  final _saved = <WordPair>{};
+  final _biggerFont = TextStyle(fontSize: 18.0);
+
+  Widget _buildSuggestions() {
+    return ListView.builder(
+        padding: EdgeInsets.all(16.0),
+        itemBuilder: (context, i) {
+          if (i.isOdd) return Divider();
+
+          final index = i ~/ 2;
+          if (index >= _suggestions.length) {
+            _suggestions.addAll(generateWordPairs().take(10));
+          }
+          return _buildRow(_suggestions[index]);
+        });
+  }
+
+  Widget _buildRow(WordPair pair) {
+    final alreadySaved = _saved.contains(pair);
+    return ListTile(
+      title: Text(
+        pair.asPascalCase,
+        style: _biggerFont,
+      ),
+      trailing: Icon(
+        alreadySaved ? Icons.favorite : Icons.favorite_border,
+        color: alreadySaved ? Colors.red : null,
+      ),
+      onTap: () {
+        setState(() {
+          if (alreadySaved) {
+            _saved.remove(pair);
+          } else {
+            _saved.add(pair);
+          }
+        });
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: BlocBuilder<DiceeBloc, DiceeState>(
-          builder: (BuildContext context, DiceeState diceeSate) {
-            int leftNumber = diceeSate.leftNumber;
-            int rightNumber = diceeSate.rightNumber;
-            child:
-            return Row(
-              children: <Widget>[
-                Expanded(
-                  child: FlatButton(
-                    child: Image.asset(
-                      'images/dice$leftNumber.png',
-                    ),
-                    onPressed: () {
-                      BlocProvider.of<DiceeBloc>(context).add(LeftDiceeEvent());
-                    },
-                  ),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Startup Name Generator'),
+        actions: [
+          IconButton(icon: Icon(Icons.list), onPressed: _pushSaved),
+        ],
+      ),
+      body: _buildSuggestions(),
+    );
+  }
+
+  void _pushSaved() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) {
+          final tiles = _saved.map(
+                (WordPair pair) {
+              return ListTile(
+                title: Text(
+                  pair.asPascalCase,
+                  style: _biggerFont,
                 ),
-                //Get students to create the second die as a challenge
-                Expanded(
-                  child: FlatButton(
-                    child: Image.asset(
-                      'images/dice$rightNumber.png',
-                    ),
-                    onPressed: () {
-                      BlocProvider.of<DiceeBloc>(context).add(RightDiceeEvent());
-                    },
-                  ),
-                ),
-              ],
-            );
-          }
+              );
+            },
+          );
+          final divided = ListTile.divideTiles(
+            context: context,
+            tiles: tiles,
+          ).toList();
+
+          return Scaffold(
+            appBar: AppBar(
+              title: Text('Saved Suggestions'),
+            ),
+            body: ListView(children: divided),
+          );
+        },
       ),
     );
   }
 }
 
-class DiceeBloc extends Bloc<DiceeEvent, DiceeState> {
-  DiceeBloc() : super(DiceeState(1, 1));
-
+class RandomWords extends StatefulWidget {
   @override
-  Stream<DiceeState> mapEventToState(DiceeEvent event) async* {
-
-    int number = Random().nextInt(6) + 1;
-
-    // Si le dé de gauche est cliqué
-    if (event is LeftDiceeEvent) {
-      yield DiceeState(number, state.rightNumber);
-      return;
-    }
-
-    // Si le dé de droite est cliqué
-    if (event is RightDiceeEvent) {
-      yield DiceeState(state.leftNumber, number);
-      return;
-    }
-  }
+  State<RandomWords> createState() => _RandomWordsState();
 }
-
-abstract class DiceeEvent {
-  const DiceeEvent();
-}
-
-class LeftDiceeEvent extends DiceeEvent {}
-
-class RightDiceeEvent extends DiceeEvent {}
-
-// Our state
-class DiceeState {
-  final int leftNumber;
-  final int rightNumber;
-
-  const DiceeState(this.leftNumber, this.rightNumber);
-}
-
