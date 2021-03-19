@@ -118,31 +118,38 @@ class RandomWords extends StatefulWidget {
   State<RandomWords> createState() => _RandomWordsState();
 }
 
+class Word {
+  final WordPair word;
+  final bool isFavorite;
+
+  const Word(this.word, this.isFavorite);
+}
+
 class WordsBloc extends Bloc<WordsEvent, WordsState> {
-  WordsBloc() : super();
+  WordsBloc() : super(WordsState(?));
 
   @override
   Stream<WordsState> mapEventToState(WordsEvent event) async* {
 
-    final _suggestions = <WordPair>[];
-    final _saved = <WordPair>{};
+    if (event is FavoritePushedEvent) {
 
-    if (event is favoritePushedEvent) {
-      WordPair wordPushed = event.wordPushed;
-      if (_saved.contains(wordPushed)) {
-        _saved.remove(wordPushed);
-        yield wordNotInFavoriteState();
-        return;
-      }
-      else {
-        _saved.add(wordPushed);
-        yield wordInFavoriteState();
-        return;
-      }
+      List<Word> wordList = event.wordList;
+      Word wordPushed = event.wordPushed;
+      int index = wordList.indexOf(wordPushed);
+
+      wordList.remove(wordPushed);
+      Word updatedWord = Word(wordPushed.word, !wordPushed.isFavorite);
+      wordList.insert(index, updatedWord);
+
+      yield WordsState(wordList);
+      return;
     }
 
-    if (event is showFavoritesPushedEvent) {
-      yield showFavoritesState(_saved);
+    if (event is ShowFavoritesPushedEvent) {
+
+      List<Word> wordList = event.wordList;
+
+      yield WordsState(wordList);
       return;
     }
 
@@ -153,24 +160,21 @@ abstract class WordsEvent {
   const WordsEvent();
 }
 
-class favoritePushedEvent extends WordsEvent {
-  final WordPair wordPushed;
+class FavoritePushedEvent extends WordsEvent {
+  final Word wordPushed;
+  final List<Word> wordList;
 
-  const favoritePushedEvent(this.wordPushed);
+  const FavoritePushedEvent(this.wordPushed, this.wordList);
 }
 
-class showFavoritesPushedEvent extends WordsEvent {}
+class ShowFavoritesPushedEvent extends WordsEvent {
+  final List<Word> wordList;
 
-abstract class WordsState {
-  const WordsState();
+  const ShowFavoritesPushedEvent(this.wordList);
 }
 
-class wordInFavoriteState extends WordsState {}
-
-class wordNotInFavoriteState extends WordsState {}
-
-class showFavoritesState extends WordsState {
-  final Set<WordPair> favWords;
-
-  const showFavoritesState(this.favWords);
+class WordsState {
+  final List<Word> wordList;
+  const WordsState(this.wordList);
 }
+
