@@ -148,6 +148,11 @@ class WordsBloc extends Bloc<WordsEvent, WordsState> {
     if (event is ShowFavoritesPushedEvent) {
 
       List<Word> wordList = event.wordList;
+      for (var Word in wordList) {
+        if (Word.isFavorite == false) {
+          wordList.remove(Word);
+        }
+      }
 
       yield WordsState(wordList);
       return;
@@ -175,6 +180,7 @@ class ShowFavoritesPushedEvent extends WordsEvent {
 
 class WordsState {
   final List<Word> wordList;
+
   const WordsState(this.wordList);
 }
 
