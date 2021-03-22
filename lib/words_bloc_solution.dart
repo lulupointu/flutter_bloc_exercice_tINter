@@ -1,7 +1,4 @@
 import 'dart:core';
-import 'dart:core';
-import 'dart:core';
-import 'dart:core';
 
 import 'package:flutter/material.dart';
 import 'package:english_words/english_words.dart';
@@ -30,34 +27,33 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class _RandomWordsState extends State<RandomWords> {
-  final _suggestions = <Word>[];
-  final _saved = <WordPair>{};
+class RandomWords extends StatelessWidget {
   final _biggerFont = TextStyle(fontSize: 18.0);
 
   Widget _buildSuggestions() {
     return BlocBuilder<WordsBloc, WordsState>(
       builder: (BuildContext context, WordsState wordsState) {
-        child:
         return ListView.builder(
-            padding: EdgeInsets.all(16.0),
-            itemBuilder: (context, i) {
-              if (i.isOdd) return Divider();
+          padding: EdgeInsets.all(16.0),
+          itemBuilder: (BuildContext context, int i) {
+            if (i.isOdd) return Divider();
 
-              final index = i ~/ 2;
-              if (index >= wordsState.wordList.length) {
-                BlocProvider.of<WordsBloc>(context).add(AddMoreWordsEvent(_suggestions, 10));
-              }
-              return _buildRow(WordsState(_suggestions).wordList[index]);
-            });
-      }
-      );
+            final index = i ~/ 2;
+            if (index >= wordsState.wordList.length) {
+              BlocProvider.of<WordsBloc>(context).add(AddMoreWordsEvent(10));
+              return CircularProgressIndicator();
+            }
+            return _buildRow(wordsState.wordList[index], context: context);
+          },
+        );
+      },
+    );
   }
 
-  Widget _buildRow(Word word) {
+  Widget _buildRow(Word word, {@required BuildContext context}) {
     return ListTile(
       title: Text(
-        word.word.asPascalCase,
+        word.wordString.asPascalCase,
         style: _biggerFont,
       ),
       trailing: Icon(
@@ -65,7 +61,7 @@ class _RandomWordsState extends State<RandomWords> {
         color: word.isFavorite ? Colors.red : null,
       ),
       onTap: () {
-        BlocProvider.of<WordsBloc>(context).add(FavoritePushedEvent(word, _suggestions));
+        BlocProvider.of<WordsBloc>(context).add(FavoritePushedEvent(word));
       },
     );
   }
@@ -76,37 +72,44 @@ class _RandomWordsState extends State<RandomWords> {
       appBar: AppBar(
         title: Text('Startup Name Generator'),
         actions: [
-          IconButton(icon: Icon(Icons.list), onPressed: _pushSaved),
+          IconButton(icon: Icon(Icons.list), onPressed: () => _pushSaved(context)),
         ],
       ),
       body: _buildSuggestions(),
     );
   }
 
-  void _pushSaved() {
+  void _pushSaved(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (BuildContext context) {
-          final tiles = _saved.map(
-                (WordPair pair) {
-              return ListTile(
-                title: Text(
-                  pair.asPascalCase,
-                  style: _biggerFont,
+          return BlocBuilder<WordsBloc, WordsState>(
+            builder: (
+              BuildContext context,
+              WordsState wordsState,
+            ) {
+              final tiles = wordsState.wordList.where((element) => element.isFavorite).map(
+                (Word word) {
+                  return ListTile(
+                    title: Text(
+                      word.wordString.asPascalCase,
+                      style: _biggerFont,
+                    ),
+                  );
+                },
+              );
+              final divided = ListTile.divideTiles(
+                context: context,
+                tiles: tiles,
+              ).toList();
+
+              return Scaffold(
+                appBar: AppBar(
+                  title: Text('Saved Suggestions'),
                 ),
+                body: ListView(children: divided),
               );
             },
-          );
-          final divided = ListTile.divideTiles(
-            context: context,
-            tiles: tiles,
-          ).toList();
-
-          return Scaffold(
-            appBar: AppBar(
-              title: Text('Saved Suggestions'),
-            ),
-            body: ListView(children: divided),
           );
         },
       ),
@@ -114,60 +117,37 @@ class _RandomWordsState extends State<RandomWords> {
   }
 }
 
-class RandomWords extends StatefulWidget {
-  @override
-  State<RandomWords> createState() => _RandomWordsState();
-}
-
 class Word {
-  final WordPair word;
+  final WordPair wordString;
   final bool isFavorite;
 
-  const Word(this.word, this.isFavorite);
+  const Word(this.wordString, this.isFavorite);
 }
 
 class WordsBloc extends Bloc<WordsEvent, WordsState> {
-  WordsBloc() : super(WordsState(?));
+  WordsBloc() : super(WordsState(generateWordPairs().take(20).map((e) => Word(e, false)).toList()));
 
   @override
   Stream<WordsState> mapEventToState(WordsEvent event) async* {
-
     if (event is FavoritePushedEvent) {
-
-      List<Word> wordList = event.wordList;
-      Word wordPushed = event.wordPushed;
-      int index = wordList.indexOf(wordPushed);
-
-      wordList.remove(wordPushed);
-      Word updatedWord = Word(wordPushed.word, !wordPushed.isFavorite);
-      wordList.insert(index, updatedWord);
-
-      yield WordsState(wordList);
-      return;
-    }
-
-    if (event is ShowFavoritesPushedEvent) {
-
-      List<Word> wordList = event.wordList;
-      for (var Word in wordList) {
-        if (Word.isFavorite == false) {
-          wordList.remove(Word);
-        }
-      }
+      List<Word> wordList = state.wordList
+          .map((element) => (element.wordString == event.wordPushed.wordString)
+              ? Word(element.wordString, !element.isFavorite)
+              : element)
+          .toList();
 
       yield WordsState(wordList);
       return;
     }
 
     if (event is AddMoreWordsEvent) {
+      int nbWords = event.numberWords;
+      List<Word> wordList = state.wordList;
+      List<Word> moreWordList = [];
 
-      int nbWords = event.nbWords;
-      List<Word> wordList = event.wordList;
-      List<Word> moreWordList;
+      List<WordPair> newWordPairList = generateWordPairs().take(nbWords).toList();
 
-      List<WordPair> newWordPairList = generateWordPairs().take(nbWords);
-
-      for (int i=0; i<nbWords; i++) {
+      for (int i = 0; i < nbWords; i++) {
         Word newWord = Word(newWordPairList[i], false);
         moreWordList.add(newWord);
       }
@@ -176,9 +156,7 @@ class WordsBloc extends Bloc<WordsEvent, WordsState> {
 
       yield WordsState(wordList);
       return;
-
     }
-
   }
 }
 
@@ -188,22 +166,14 @@ abstract class WordsEvent {
 
 class FavoritePushedEvent extends WordsEvent {
   final Word wordPushed;
-  final List<Word> wordList;
 
-  const FavoritePushedEvent(this.wordPushed, this.wordList);
-}
-
-class ShowFavoritesPushedEvent extends WordsEvent {
-  final List<Word> wordList;
-
-  const ShowFavoritesPushedEvent(this.wordList);
+  const FavoritePushedEvent(this.wordPushed);
 }
 
 class AddMoreWordsEvent extends WordsEvent {
-  final List<Word> wordList;
-  final int nbWords;
+  final int numberWords;
 
-  const AddMoreWordsEvent(this.wordList, this.nbWords);
+  const AddMoreWordsEvent(this.numberWords);
 }
 
 class WordsState {
@@ -211,4 +181,3 @@ class WordsState {
 
   const WordsState(this.wordList);
 }
-
