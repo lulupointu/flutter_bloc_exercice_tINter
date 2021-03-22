@@ -19,10 +19,13 @@ void main() => runApp(MyApp());
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Startup Name Generator',
-      home: RandomWords(),
+    return BlocProvider<WordsBloc>(
+      create: (BuildContext context) => WordsBloc(),
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Startup Name Generator',
+        home: RandomWords(),
+      ),
     );
   }
 }
@@ -158,6 +161,26 @@ class WordsBloc extends Bloc<WordsEvent, WordsState> {
       return;
     }
 
+    if (event is AddMoreWordsEvent) {
+
+      int nbWords = event.nbWords;
+      List<Word> wordList = event.wordList;
+      List<Word> moreWordList;
+
+      List<WordPair> newWordPairList = generateWordPairs().take(nbWords);
+
+      for (int i=0; i<nbWords; i++) {
+        Word newWord = Word(newWordPairList[i], false);
+        moreWordList.add(newWord);
+      }
+
+      wordList.addAll(moreWordList);
+
+      yield WordsState(wordList);
+      return;
+
+    }
+
   }
 }
 
@@ -176,6 +199,13 @@ class ShowFavoritesPushedEvent extends WordsEvent {
   final List<Word> wordList;
 
   const ShowFavoritesPushedEvent(this.wordList);
+}
+
+class AddMoreWordsEvent extends WordsEvent {
+  final List<Word> wordList;
+  final int nbWords;
+
+  const AddMoreWordsEvent(this.wordList, this.nbWords);
 }
 
 class WordsState {
